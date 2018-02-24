@@ -131,6 +131,30 @@ class slackbot(bot_command):
                 return "slackbot"
         async def handle(self, client, message, member, command, argument):
                 await client.send_message(message.channel, "You're a Slackbot!")
+
+class clean_roles(bot_command):
+        def get_command(self):
+                return "cleanroles"
+        async def handle(self, client, message, member, command, argument):
+                role_list = []
+                for user in message.server.members:
+                        role_list += user.roles
+                role_list = list(set(role_list))
+
+                delete_roles_pretty = "```Removed following roles:\n"
+                for role in message.server.roles:
+                        if role not in role_list:
+                                if not low_enough_role(discord.utils.get(message.server.members, name=client.user.name), role):
+                                        continue
+                                if not able_to_modify_role(role):
+                                        continue
+                                delete_roles_pretty += role.name + "\n"
+                                await client.delete_role(message.server, role)
+
+                delete_roles_pretty += "```"
+
+                await client.send_message(message.channel, delete_roles_pretty)
+                        
                 
 # Add all possible commands to the command list
 command_list = []
@@ -141,6 +165,7 @@ command_list += [roles()]
 command_list += [bot_help()]
 command_list += [commands(command_list)]
 command_list += [slackbot()]
+command_list += [clean_roles()]
 
 ### Bot message handling. Should not have to modify under this comment
 
@@ -171,9 +196,13 @@ async def on_message(message):
                 argument = content[2]
                 role = discord.utils.get(message.server.roles, name=argument)
                 if role != None:
+                        if not low_enough_role(discord.utils.get(message.server.members, name=client.user.name), role):
+                                # Error checking if the bot has permission to modify a role it is underneath
+                                await client.send_message(message.channel, "Bot has too low permission to modify role '" + argument + "'")
+                                return
                         if not able_to_modify_role(role):
                                 # If the wanted argument is a role and the role can do anything that isn't user-created, we don't allow it
-                                await client.send_message(message.channel, "Unable to modify role '" + argument + "'.")
+                                await client.send_message(message.channel, "Unable to modify role '" + argument + "'")
                                 return
 
         found_command = False
@@ -186,5 +215,5 @@ async def on_message(message):
         if not found_command:
                 await client.send_message(message.channel, "Command `" + command + "` does not exist")
                 
-    
+
 client.run(bw_bot_private.get_bot_token())
