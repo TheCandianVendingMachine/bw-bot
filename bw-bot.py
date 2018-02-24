@@ -207,7 +207,7 @@ async def on_message(message):
 
         found_command = False
         for command_obj in command_list:
-                if command_obj.get_command() == command:
+                if command_obj.get_command() == command.lower():
                         await command_obj.handle(client, message, member, command, argument)
                         found_command = True
                         break
@@ -215,5 +215,6 @@ async def on_message(message):
         if not found_command:
                 await client.send_message(message.channel, "Command `" + command + "` does not exist")
                 
+
 
 client.run(bw_bot_private.get_bot_token())
